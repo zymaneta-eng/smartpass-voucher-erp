@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="fa-solid fa-ticket text-primary me-2"></i> Реєстр електронних талонів та абонементів</h6>
+        <div>
+            <span class="text-muted small">Всього в базі: {{ vouchers|length }} шт.</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Унікальний код</th>
+                        <th>Мережа / Локація</th>
+                        <th>Послуга / Номінал</th>
+                        <th>Власник</th>
+                        <th>Статус талона</th>
+                        <th>Видано</th>
+                        <th>Дійсний до</th>
+                        <th class="text-end pe-4">QR-код</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in vouchers %}
+                    <tr>
+                        <td class="ps-4 fw-bold font-monospace text-primary">{{ v.voucher_code }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ v.network_name }}</span></td>
+                        <td>
+                            <div class="fw-semibold">{{ v.service_name }}</div>
+                            <small class="text-muted">{{ v.denomination }}</small>
+                        </td>
+                        <td>
+                            <div>{{ v.full_name }}</div>
+                            <small class="text-muted">{{ v.phone }}</small>
+                        </td>
+                        <td>
+                            {% if v.status == 'AVAILABLE' %}
+                            <span class="badge-status badge-approved">Доступний</span>
+                            {% elif v.status == 'RESERVED' %}
+                            <span class="badge-status badge-reserved">Зарезервовано (Чек-ін)</span>
+                            {% elif v.status == 'USED' %}
+                            <span class="badge-status badge-used">Погашено (Використано)</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ v.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ v.created_at[:10] }}</small></td>
+                        <td><small class="text-muted">{{ v.expires_at }}</small></td>
+                        <td class="text-end pe-4">
+                            <a href="{{ v.qr_image }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Відкрити QR">
+                                <i class="fa-solid fa-qrcode me-1"></i> QR
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

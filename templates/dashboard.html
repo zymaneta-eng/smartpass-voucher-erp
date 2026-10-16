@@ -1,0 +1,627 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 3. Four Compact KPI Cards -->
+<div class="row g-3 g-xl-4 mb-4">
+    <!-- KPI 1: Pending Orders -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="sp-kpi-card">
+            <div>
+                <div class="sp-kpi-title">Очікують перевірки оплати</div>
+                <div class="sp-kpi-value text-dark">{{ pending_orders_count }}</div>
+                <div class="sp-kpi-subtitle text-warning">
+                    <i class="fa-solid fa-clock" style="font-size: 0.72rem;"></i>
+                    <span>Потрібна верифікація чека</span>
+                </div>
+            </div>
+            <div class="sp-kpi-icon sp-kpi-amber">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 2: Active Vouchers -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="sp-kpi-card">
+            <div>
+                <div class="sp-kpi-title">Активні талони</div>
+                <div class="sp-kpi-value text-dark">{{ active_vouchers_count }}</div>
+                <div class="sp-kpi-subtitle text-success">
+                    <i class="fa-solid fa-circle-check" style="font-size: 0.72rem;"></i>
+                    <span>Готові до сканування на АЗС</span>
+                </div>
+            </div>
+            <div class="sp-kpi-icon sp-kpi-blue">
+                <i class="fa-solid fa-ticket"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 3: Urgent QR Checkins -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="sp-kpi-card">
+            <div>
+                <div class="sp-kpi-title">Термінові QR-запити</div>
+                <div class="sp-kpi-value {% if pending_checkins_count > 0 %}text-danger{% else %}text-dark{% endif %}">
+                    {{ pending_checkins_count }}
+                </div>
+                <div class="sp-kpi-subtitle {% if pending_checkins_count > 0 %}text-danger{% else %}text-muted{% endif %}">
+                    <i class="fa-solid fa-bolt" style="font-size: 0.72rem;"></i>
+                    <span>Клієнти на точці чек-іну</span>
+                </div>
+            </div>
+            <div class="sp-kpi-icon {% if pending_checkins_count > 0 %}sp-kpi-red{% else %}sp-kpi-amber{% endif %}">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 4: Turnover (Separated UAH & USDT) -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="sp-kpi-card">
+            <div>
+                <div class="sp-kpi-title">Оборот</div>
+                <div class="sp-kpi-value" style="font-size: 1.25rem;">
+                    <span>{{ turnover_uah | default('8 050 ₴') }}</span>
+                    <span style="font-size: 0.85rem; font-weight: 500; color: var(--sp-text-muted);" class="ms-1">&bull; {{ turnover_usdt | default('61.00 USDT') }}</span>
+                </div>
+                <div class="sp-kpi-subtitle text-muted">
+                    <i class="fa-solid fa-scale-balanced" style="font-size: 0.72rem;"></i>
+                    <span>Безготівка ТОВ, ФОП та USDT</span>
+                </div>
+            </div>
+            <div class="sp-kpi-icon sp-kpi-green">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Block: Urgent QR Requests -->
+<div class="sp-card mb-4" id="urgentCheckinsCard">
+    <div class="sp-card-header">
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="sp-card-title">
+                <i class="fa-solid fa-bolt text-danger"></i>
+                <span>Термінові QR-запити</span>
+            </h2>
+            {% if pending_checkins_count > 0 %}
+            <span class="sp-badge sp-badge-urgent">{{ pending_checkins_count }} очікує</span>
+            {% else %}
+            <span class="sp-badge sp-badge-available">Черга вільна</span>
+            {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="sp-search-box d-none d-md-block">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="sp-search-input" id="checkinSearchInput" placeholder="Пошук клієнта або АЗС..." onkeyup="filterTable('checkinSearchInput', 'checkinsTable')">
+            </div>
+            <a href="/checkins" class="btn btn-sm btn-sp-outline">
+                <span>Всі чек-іни</span>
+                <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="sp-card-body-table">
+        {% if checkins and checkins|length > 0 %}
+        <div class="table-responsive">
+            <table class="sp-table align-middle" id="checkinsTable">
+                <thead>
+                    <tr>
+                        <th>ID запиту</th>
+                        <th>Клієнт</th>
+                        <th>Локація / Мережа</th>
+                        <th>Талон</th>
+                        <th>Час створення</th>
+                        <th>Статус</th>
+                        <th class="text-end">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ch in checkins %}
+                    <tr>
+                        <td>
+                            <span class="fw-bold font-monospace text-secondary">#CHK-00{{ ch.id }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ ch.full_name }}</div>
+                            <small class="text-muted">Клієнт на касі</small>
+                        </td>
+                        <td>
+                            <span class="sp-badge sp-badge-brand">
+                                <i class="fa-solid fa-gas-pump"></i> {{ ch.network_name | default("Мережа АЗС") }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold font-monospace">{{ ch.voucher_code }}</div>
+                            <small class="text-muted">{{ ch.denomination }}</small>
+                        </td>
+                        <td>
+                            <span class="text-secondary small">{{ ch.created_at }}</span>
+                        </td>
+                        <td>
+                            <span class="sp-badge sp-badge-urgent">
+                                <i class="fa-solid fa-clock"></i> Очікує підтвердження
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex align-items-center gap-1">
+                                <!-- Secure Token Inspection -->
+                                <button type="button" class="btn btn-sm btn-sp-outline py-1 px-2" data-bs-toggle="modal" data-bs-target="#qrTokenModal{{ ch.id }}" title="Перевірити безпековий токен">
+                                    <i class="fa-solid fa-shield-halved text-primary"></i>
+                                    <span class="d-none d-lg-inline">Токен</span>
+                                </button>
+
+                                <!-- Confirm Action with Modal -->
+                                <button type="button" class="btn btn-sm btn-sp-success py-1 px-2" data-bs-toggle="modal" data-bs-target="#confirmCheckinModal{{ ch.id }}">
+                                    <i class="fa-solid fa-check"></i>
+                                    <span>Підтвердити</span>
+                                </button>
+
+                                <!-- Cancel Action with Modal -->
+                                <button type="button" class="btn btn-sm btn-sp-danger-outline py-1 px-2" data-bs-toggle="modal" data-bs-target="#cancelCheckinModal{{ ch.id }}">
+                                    <span>Скасувати</span>
+                                </button>
+                            </div>
+
+                            <!-- Modal: Secure Token Details (Sensitive Data Guard) -->
+                            <div class="modal fade text-start" id="qrTokenModal{{ ch.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4" style="background-color: var(--sp-bg-canvas); border-bottom: 1px solid var(--sp-border);">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fa-solid fa-shield-halved text-primary"></i>
+                                                <h6 class="modal-title fw-bold text-dark mb-0">Безпекова картка токена #CHK-00{{ ch.id }}</h6>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4">
+                                            <div class="alert alert-info py-2 px-3 small mb-3 border-0" style="background-color: var(--sp-accent-subtle); color: var(--sp-accent-primary);">
+                                                <i class="fa-solid fa-lock me-1"></i> Чутливі дані приховані з загальної таблиці. Доступ авторизовано для оператора.
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small fw-semibold">Клієнт</label>
+                                                <div class="fw-bold text-dark">{{ ch.full_name }}</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small fw-semibold">Повний безпековий токен QR</label>
+                                                <div class="p-2 bg-light border rounded font-monospace fw-bold text-dark text-break">
+                                                    {{ ch.qr_token }}
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label text-muted small fw-semibold">Код талона</label>
+                                                    <div class="fw-semibold text-dark">{{ ch.voucher_code }}</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label text-muted small fw-semibold">Номінал</label>
+                                                    <div class="fw-semibold text-dark">{{ ch.denomination }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4" style="border-top: 1px solid var(--sp-border);">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Закрити</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal: Confirm Checkin -->
+                            <div class="modal fade text-start" id="confirmCheckinModal{{ ch.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4">
+                                            <h6 class="modal-title fw-bold text-dark mb-0">Підтвердження сканування талона</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="mb-3">
+                                                <i class="fa-solid fa-circle-check text-success" style="font-size: 2.5rem;"></i>
+                                            </div>
+                                            <h6 class="fw-bold mb-2">Погасити талон для клієнта {{ ch.full_name }}?</h6>
+                                            <p class="text-muted small mb-0">
+                                                Талон <strong>{{ ch.voucher_code }}</strong> ({{ ch.denomination }}) буде безповоротно переведено в статус <strong>USED</strong> (Використано). Захист від race condition гарантує блокування повторного списання.
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4 bg-light">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Скасувати</button>
+                                            <form action="/checkins/confirm/{{ ch.id }}" method="post" class="d-inline m-0">
+                                                <button type="submit" class="btn btn-sm btn-sp-success">
+                                                    <i class="fa-solid fa-check me-1"></i> Підтвердити та погасити
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal: Cancel Checkin -->
+                            <div class="modal fade text-start" id="cancelCheckinModal{{ ch.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4">
+                                            <h6 class="modal-title fw-bold text-dark mb-0">Скасування запиту на чек-ін</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="mb-3">
+                                                <i class="fa-solid fa-triangle-exclamation text-warning" style="font-size: 2.5rem;"></i>
+                                            </div>
+                                            <h6 class="fw-bold mb-2">Скасувати чергу чек-іну #CHK-00{{ ch.id }}?</h6>
+                                            <p class="text-muted small mb-0">
+                                                Талон буде повернуто в статус <strong>AVAILABLE</strong> на баланс клієнта {{ ch.full_name }}.
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4 bg-light">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Назад</button>
+                                            <form action="/checkins/cancel/{{ ch.id }}" method="post" class="d-inline m-0">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    Скасувати запит
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sp-empty-state">
+            <div class="sp-empty-icon text-success">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="sp-empty-title">Немає термінових QR-запитів</div>
+            <p class="sp-empty-desc">Всі черги на точках обслуговування вільні. Нові запити клієнтів з'являться тут автоматично.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 5. Block: Orders Awaiting Payment Verification -->
+<div class="sp-card mb-4" id="pendingOrdersCard">
+    <div class="sp-card-header">
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="sp-card-title">
+                <i class="fa-solid fa-receipt text-primary"></i>
+                <span>Замовлення, що очікують перевірки оплати</span>
+            </h2>
+            {% if pending_orders_count > 0 %}
+            <span class="sp-badge sp-badge-pending">{{ pending_orders_count }} нових</span>
+            {% else %}
+            <span class="sp-badge sp-badge-available">Опрацьовано</span>
+            {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="sp-search-box d-none d-md-block">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="sp-search-input" id="orderSearchInput" placeholder="Пошук за № або клієнтом..." onkeyup="filterTable('orderSearchInput', 'ordersTable')">
+            </div>
+            <a href="/orders" class="btn btn-sm btn-sp-outline">
+                <span>Всі замовлення</span>
+                <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="sp-card-body-table">
+        {% if pending_orders and pending_orders|length > 0 %}
+        <div class="table-responsive">
+            <table class="sp-table align-middle" id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>№ замовлення</th>
+                        <th>Клієнт</th>
+                        <th>Товар / послуга</th>
+                        <th>Сума</th>
+                        <th>Спосіб оплати</th>
+                        <th>Чек</th>
+                        <th>Дата</th>
+                        <th class="text-end">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in pending_orders %}
+                    <tr>
+                        <td>
+                            <span class="fw-bold text-dark font-monospace">{{ o.order_number }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ o.full_name }}</div>
+                            <small class="text-muted">{{ o.phone }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-medium text-dark">{{ o.service_name }}</div>
+                            <small class="text-muted">{{ o.network_name }} &bull; {{ o.denomination }} (x{{ o.quantity }})</small>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">
+                                {{ o.total_amount }} {{ o.currency }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if o.payment_method == 'USDT' %}
+                            <span class="sp-badge" style="background-color: #E0F2FE; color: #0369A1; border: 1px solid rgba(2, 132, 199, 0.2);">
+                                <i class="fa-brands fa-ethereum me-1"></i> USDT TRC20
+                            </span>
+                            {% elif o.payment_method == 'FOP' %}
+                            <span class="sp-badge sp-badge-pending">
+                                <i class="fa-solid fa-briefcase me-1"></i> Рахунок ФОП
+                            </span>
+                            {% else %}
+                            <span class="sp-badge" style="background-color: #F1F5F9; color: #334155; border: 1px solid var(--sp-border);">
+                                <i class="fa-solid fa-building me-1"></i> Рахунок ТОВ (ПДВ)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-sp-outline py-1 px-2" data-bs-toggle="modal" data-bs-target="#receiptModal{{ o.id }}">
+                                <i class="fa-regular fa-image text-primary me-1"></i>
+                                <span>Переглянути чек</span>
+                            </button>
+                        </td>
+                        <td>
+                            <span class="text-secondary small">{{ o.created_at }}</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex align-items-center gap-1">
+                                <!-- Approve button opens confirmation dialog -->
+                                <button type="button" class="btn btn-sm btn-sp-success py-1 px-2" data-bs-toggle="modal" data-bs-target="#approveOrderModal{{ o.id }}">
+                                    <i class="fa-solid fa-check me-1"></i>
+                                    <span>Схвалити та випустити талони</span>
+                                </button>
+                                
+                                <!-- Reject button opens confirmation dialog -->
+                                <button type="button" class="btn btn-sm btn-sp-danger-outline py-1 px-2" data-bs-toggle="modal" data-bs-target="#rejectOrderModal{{ o.id }}" title="Відхилити платіж">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <!-- Modal: Receipt Preview -->
+                            <div class="modal fade text-start" id="receiptModal{{ o.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4" style="background-color: var(--sp-bg-canvas); border-bottom: 1px solid var(--sp-border);">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fa-solid fa-receipt text-primary"></i>
+                                                <h6 class="modal-title fw-bold text-dark mb-0">Квитанція замовлення {{ o.order_number }}</h6>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="mb-3">
+                                                <img src="/static/receipts/{{ o.receipt_file }}" class="img-fluid rounded border shadow-sm" style="max-height: 380px; object-fit: contain;" alt="Чек замовлення">
+                                            </div>
+                                            <div class="p-2 bg-light rounded border text-start small">
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <span class="text-muted">Сума до перевірки:</span>
+                                                    <strong class="text-dark">{{ o.total_amount }} {{ o.currency }}</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="text-muted">Спосіб оплати:</span>
+                                                    <strong class="text-dark">{{ o.payment_method }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4" style="border-top: 1px solid var(--sp-border);">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Закрити</button>
+                                            <button type="button" class="btn btn-sm btn-sp-success" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#approveOrderModal{{ o.id }}">
+                                                <i class="fa-solid fa-check me-1"></i> Схвалити платіж
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal: Confirmation before Approve -->
+                            <div class="modal fade text-start" id="approveOrderModal{{ o.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4">
+                                            <h6 class="modal-title fw-bold text-dark mb-0">Підтвердження випуску талонів</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="mb-3">
+                                                <i class="fa-solid fa-circle-check text-success" style="font-size: 2.5rem;"></i>
+                                            </div>
+                                            <h6 class="fw-bold mb-2">Підтвердити оплату замовлення {{ o.order_number }}?</h6>
+                                            <p class="text-muted small mb-3">
+                                                Клієнт: <strong>{{ o.full_name }}</strong> &bull; Сума: <strong>{{ o.total_amount }} {{ o.currency }}</strong>
+                                            </p>
+                                            <div class="alert alert-light border small text-start p-2 mb-0">
+                                                <i class="fa-solid fa-info-circle text-primary me-1"></i> Після схвалення система атомарно згенерує унікальні QR-коди та надішле клієнту в Telegram.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4 bg-light">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Скасувати</button>
+                                            <form action="/orders/approve/{{ o.id }}" method="post" class="d-inline m-0">
+                                                <button type="submit" class="btn btn-sm btn-sp-success">
+                                                    <i class="fa-solid fa-check me-1"></i> Підтвердити та випустити
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal: Confirmation before Reject -->
+                            <div class="modal fade text-start" id="rejectOrderModal{{ o.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="border-radius: var(--sp-radius-lg); border-color: var(--sp-border);">
+                                        <div class="modal-header py-3 px-4">
+                                            <h6 class="modal-title fw-bold text-dark mb-0">Відхилення замовлення {{ o.order_number }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="mb-3">
+                                                <i class="fa-solid fa-circle-xmark text-danger" style="font-size: 2.5rem;"></i>
+                                            </div>
+                                            <h6 class="fw-bold mb-2">Відхилити оплату замовлення?</h6>
+                                            <p class="text-muted small mb-0">
+                                                Замовлення <strong>{{ o.order_number }}</strong> отримає статус <strong>REJECTED</strong>. Клієнт отримає сповіщення про недійсність квитанції.
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer py-2 px-4 bg-light">
+                                            <button type="button" class="btn btn-sm btn-sp-outline" data-bs-dismiss="modal">Назад</button>
+                                            <form action="/orders/reject/{{ o.id }}" method="post" class="d-inline m-0">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    Підтвердити відхилення
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sp-empty-state">
+            <div class="sp-empty-icon text-success">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="sp-empty-title">Всі оплати перевірено</div>
+            <p class="sp-empty-desc">Немає замовлень, які потребують підтвердження квитанцій або випуску талонів.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 6. Bottom Split Section: Two Columns -->
+<div class="row g-4">
+    <!-- Left Column: Recently Issued Vouchers -->
+    <div class="col-12 col-lg-7">
+        <div class="sp-card h-100 mb-0">
+            <div class="sp-card-header">
+                <h3 class="sp-card-title">
+                    <i class="fa-solid fa-ticket text-primary"></i>
+                    <span>Нещодавно видані талони</span>
+                </h3>
+                <a href="/vouchers" class="btn btn-sm btn-sp-outline">
+                    <span>Склад талонів</span>
+                    <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="sp-card-body-table">
+                {% if recent_vouchers and recent_vouchers|length > 0 %}
+                <div class="table-responsive">
+                    <table class="sp-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Код</th>
+                                <th>Мережа</th>
+                                <th>Клієнт</th>
+                                <th>Статус</th>
+                                <th class="text-end">Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in recent_vouchers %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold font-monospace text-dark">{{ v.voucher_code }}</span>
+                                </td>
+                                <td>
+                                    <span class="sp-badge sp-badge-brand">{{ v.network_name }}</span>
+                                </td>
+                                <td>
+                                    <div class="small fw-medium text-dark">{{ v.full_name }}</div>
+                                </td>
+                                <td>
+                                    {% if v.status == 'AVAILABLE' %}
+                                    <span class="sp-badge sp-badge-available">Доступний</span>
+                                    {% elif v.status == 'RESERVED' %}
+                                    <span class="sp-badge sp-badge-reserved">Зарезервовано</span>
+                                    {% else %}
+                                    <span class="sp-badge sp-badge-used">Використано</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ v.qr_image }}" target="_blank" class="btn btn-sm btn-sp-outline py-1 px-2" title="Переглянути QR">
+                                        <i class="fa-solid fa-qrcode text-muted"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="sp-empty-state">
+                    <div class="sp-empty-title">Немає випущених талонів</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Recent Audit Log -->
+    <div class="col-12 col-lg-5">
+        <div class="sp-card h-100 mb-0">
+            <div class="sp-card-header">
+                <h3 class="sp-card-title">
+                    <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                    <span>Останні дії в журналі</span>
+                </h3>
+                <a href="/audit" class="btn btn-sm btn-sp-outline">
+                    <span>Весь журнал</span>
+                    <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="sp-card-body p-3">
+                {% if recent_audit and recent_audit|length > 0 %}
+                <div class="list-group list-group-flush">
+                    {% for a in recent_audit %}
+                    <div class="list-group-item px-1 py-2 border-0 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="sp-badge" style="background-color: var(--sp-border-subtle); color: var(--sp-text-secondary); font-size: 0.7rem; font-family: monospace;">
+                                {{ a.action }}
+                            </span>
+                            <span class="text-muted" style="font-size: 0.74rem;">{{ a.created_at[11:16] }}</span>
+                        </div>
+                        <div class="small fw-medium text-dark" style="line-height: 1.35;">{{ a.details }}</div>
+                        <div class="text-muted mt-1" style="font-size: 0.72rem;">
+                            <i class="fa-regular fa-user me-1"></i> {{ a.admin_name }} &bull; {{ a.ip_address }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="sp-empty-state">
+                    <div class="sp-empty-title">Журнал порожній</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client-side Quick Filtering Script -->
+<script>
+    function filterTable(inputId, tableId) {
+        const input = document.getElementById(inputId);
+        const filter = input.value.toLowerCase();
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            const rowText = rows[i].textContent || rows[i].innerText;
+            if (rowText.toLowerCase().indexOf(filter) > -1) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="fa-solid fa-receipt text-primary me-2"></i> Реєстр замовлень</h6>
+        <div class="d-flex gap-2">
+            <span class="badge bg-warning text-dark py-2 px-3">Очікують перевірки: {{ pending_orders_count }}</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">№</th>
+                        <th>Клієнт</th>
+                        <th>Послуга</th>
+                        <th>Сума</th>
+                        <th>Оплата</th>
+                        <th>Квитанція</th>
+                        <th>Статус</th>
+                        <th>Створено</th>
+                        <th class="text-end pe-4">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr>
+                        <td class="ps-4 fw-bold font-monospace">{{ o.order_number }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ o.full_name }}</div>
+                            <small class="text-muted">{{ o.phone }}</small>
+                        </td>
+                        <td>
+                            <div>{{ o.service_name }}</div>
+                            <small class="text-muted">{{ o.network_name }} (x{{ o.quantity }})</small>
+                        </td>
+                        <td class="fw-bold">{{ o.total_amount }} {{ o.currency }}</td>
+                        <td>
+                            {% if o.payment_method == 'USDT' %}
+                            <span class="badge bg-info text-dark">USDT TRC20</span>
+                            {% elif o.payment_method == 'FOP' %}
+                            <span class="badge bg-warning text-dark">ФОП</span>
+                            {% else %}
+                            <span class="badge bg-secondary">ТОВ (ПДВ)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if o.receipt_file %}
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#receiptModal{{ o.id }}">
+                                <i class="fa-solid fa-eye me-1"></i> Чек
+                            </button>
+                            <div class="modal fade" id="receiptModal{{ o.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold">Чек: {{ o.order_number }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body text-center p-3">
+                                            <img src="/static/receipts/{{ o.receipt_file }}" class="img-fluid rounded border" alt="Чек">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">Немає</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if o.status == 'PAID_REPORTED' %}
+                            <span class="badge-status badge-pending">Очікує перевірки</span>
+                            {% elif o.status == 'APPROVED' %}
+                            <span class="badge-status badge-approved">Схвалено</span>
+                            {% elif o.status == 'REJECTED' %}
+                            <span class="badge-status badge-rejected">Відхилено</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">Нове</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ o.created_at }}</small></td>
+                        <td class="text-end pe-4">
+                            {% if o.status == 'PAID_REPORTED' %}
+                            <form action="/orders/approve/{{ o.id }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success btn-action" title="Схвалити та випустити талони">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            </form>
+                            <form action="/orders/reject/{{ o.id }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger btn-action ms-1" title="Відхилити">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small"><i class="fa-solid fa-lock"></i> Оброблено</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

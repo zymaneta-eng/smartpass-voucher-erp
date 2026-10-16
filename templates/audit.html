@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> Незмінний журнал дій адміністраторів (Security Audit Trail)</h6>
+        <span class="badge bg-secondary font-monospace">Зберігається в базі даних</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Адміністратор</th>
+                        <th>Дія</th>
+                        <th>Деталі події</th>
+                        <th>IP-адреса</th>
+                        <th class="text-end pe-4">Час</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in logs %}
+                    <tr>
+                        <td class="ps-4 font-monospace text-muted">#{{ a.id }}</td>
+                        <td class="fw-bold">{{ a.admin_name }}</td>
+                        <td>
+                            {% if 'СХВАЛЕННЯ' in a.action %}
+                            <span class="badge bg-success">{{ a.action }}</span>
+                            {% elif 'ВІДХИЛЕННЯ' in a.action %}
+                            <span class="badge bg-danger">{{ a.action }}</span>
+                            {% elif 'ПОГАШЕННЯ' in a.action %}
+                            <span class="badge bg-primary">{{ a.action }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ a.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ a.details }}</td>
+                        <td><small class="font-monospace text-muted">{{ a.ip_address }}</small></td>
+                        <td class="text-end pe-4"><small class="text-muted">{{ a.created_at }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

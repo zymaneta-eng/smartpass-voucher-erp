@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-danger">
+                    <i class="fa-solid fa-qrcode me-2"></i> Черга запитів на чек-ін (валідація талонів на локації)
+                </h6>
+                <span class="badge bg-danger">{{ checkins|length }} активних</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Токен</th>
+                                <th>Клієнт</th>
+                                <th>Локація</th>
+                                <th>Талон</th>
+                                <th>Час</th>
+                                <th class="text-end pe-4">Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ch in checkins %}
+                            <tr>
+                                <td class="ps-4 fw-bold font-monospace">{{ ch.qr_token }}</td>
+                                <td>{{ ch.full_name }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ ch.network_name }}</span></td>
+                                <td>{{ ch.voucher_code }}</td>
+                                <td><small class="text-muted">{{ ch.created_at[11:19] }}</small></td>
+                                <td class="text-end pe-4">
+                                    <form action="/checkins/confirm/{{ ch.id }}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-success btn-action">
+                                            <i class="fa-solid fa-check me-1"></i> Погасити талон
+                                        </button>
+                                    </form>
+                                    <form action="/checkins/cancel/{{ ch.id }}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary btn-action ms-1">
+                                            Скасувати
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-check-double text-success me-2"></i> Черга чиста. Немає активних запитів на чек-ін.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="fa-solid fa-barcode text-primary me-2"></i> Симуляція ручного сканера</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Введіть код талона або токен із QR-коду гостя для миттєвої перевірки та погашення:</p>
+                <form action="/checkins/manual-redeem" method="post">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Код талона (напр. SP-SPA-...)</label>
+                        <input type="text" name="code" class="form-control font-monospace" placeholder="Введіть або відскануйте код..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-action">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i> Перевірити та списати
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

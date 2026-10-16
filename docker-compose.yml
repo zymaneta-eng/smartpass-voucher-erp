@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: smartpass_web
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./smartpass.db:/app/smartpass.db
+      - ./static/qrcodes:/app/static/qrcodes
+      - ./static/receipts:/app/static/receipts
+    restart: unless-stopped
