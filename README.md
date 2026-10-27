@@ -128,7 +128,12 @@ docker compose up -d --build
 
 ---
 
-## 👩‍💻 Автор та контакти
-**Nataliia Zyma**  
+## 👩‍💻 Автор та контакти для замовлення
+**Nataliia Zyma** (ФОП Зима Н. М.)  
 Python / Automation & Bot Developer  
-Freelancehunt: [Nataliia_Z2](https://freelancehunt.com/freelancer/Nataliia_Z2.html)
+
+* 💬 **Прямий зв'язок у Telegram:** [@Nataly_Zyma](https://t.me/Nataly_Zyma)
+* 📧 **Офіційний Email:** `areonixwinter@gmail.com`
+* 🤖 **Бот технічної підтримки:** [@AreonixSupport_bot](https://t.me/AreonixSupport_bot)
+* 💼 **Профіль на Freelancehunt:** [Nataliia_Z2](https://freelancehunt.com/freelancer/Nataliia_Z2.html)
+* 🏢 Офіційна розробка систем обліку, Telegram-ботів та ERP для бізнесу за договором.
